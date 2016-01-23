@@ -55,7 +55,7 @@ public class HtmlProcessorTest {
 	}
 	
 	@Test
-	public void shouldRetunListOfPhrasesWithGivenWord() throws Exception {
+	public void shouldRetunListOfPhrasesWithGivenWord() {
 		String testWord = "testWord";
 		String text = "Szybko powiedzia " + testWord + " .";
 		
@@ -63,6 +63,6 @@ public class HtmlProcessorTest {
 		
 		assertThat(resultUrl).hasSize(1);
 		assertThat(resultUrl.get(0)).isEqualTo(text);
-		
 	}
+	
 }

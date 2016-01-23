@@ -23,6 +23,7 @@ public class HtmlProcessor {
 			String link = matcher.group(DATA_POSITION);
 
 			String name = getNameFromUrl(link);
+			
 			urls.add(new HtmlUrl(name, PROTOCOL_SUFFIX + link));
 		}
 
