@@ -1,8 +1,11 @@
 package org.pwr.crawler.db.crud;
 
-import static org.pwr.crawler.utils.restriction.DocumentRestriction.*;
+import static org.pwr.crawler.utils.restriction.DocumentRestriction.eq;
+import static org.pwr.crawler.utils.restriction.DocumentRestriction.set;
+
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import org.bson.Document;
 import org.bson.types.ObjectId;
@@ -18,6 +21,12 @@ import com.mongodb.client.result.DeleteResult;
 public class LinkDAOImpl extends GenericDAO implements LinkDAO {
 
 	private final static String COLLECTION_NAME = "links";
+
+	private static LinkDAOImpl instance;
+
+	private LinkDAOImpl() {
+
+	}
 
 	@Override
 	protected String getCollectionName() {
@@ -40,11 +49,14 @@ public class LinkDAOImpl extends GenericDAO implements LinkDAO {
 	}
 
 	@Override
-	public String saveUrl(HtmlUrl url) {
-		Document urlDocument = HtmlLinkMapper.mapHtmlLink(url);
-		collection.insertOne(urlDocument);
-
-		return BsonDocumentUtils.getId(urlDocument);
+	public Optional<String> saveUrl(HtmlUrl url) {
+		Document urlDocument = null;
+		if (!checkIfExists(url.getUrl())) {
+			urlDocument = HtmlLinkMapper.mapHtmlLink(url);
+			collection.insertOne(urlDocument);
+			return Optional.of(BsonDocumentUtils.getId(urlDocument));
+		}
+		return Optional.empty();
 	}
 
 	@Override
@@ -66,29 +78,49 @@ public class LinkDAOImpl extends GenericDAO implements LinkDAO {
 	}
 
 	@Override
-	public synchronized List<HtmlUrl> listUnprocessedLinksForThread(int threadAmount) {
+	public synchronized List<HtmlUrl> listUnprocessedLinksForThread(int linksToFetchAmount) {
 		List<HtmlUrl> urls = new ArrayList();
-		
-		Long unprocessedLinksAmount = countUnprocessedLinks();
 
-		int limit = (int) (unprocessedLinksAmount / threadAmount);
-		FindIterable<Document> documents = collection.find(eq("isProcessed", false)).limit(limit);
-		
-		for (Document doc : documents) {
-			collection.updateOne(doc, set("isProcessed", true));
-		}
+		FindIterable<Document> documents = collection.find(eq("isProcessed", false)).limit(linksToFetchAmount);
 
 		for (Document document : documents) {
 			HtmlUrl url = gson.fromJson(document.toJson(), HtmlUrl.class);
 			urls.add(url);
 		}
 
+		for (Document doc : documents) {
+			collection.updateOne(doc, set("isProcessed", true));
+		}
+
 		return urls;
 	}
-	
+
 	@Override
-	public Long countUnprocessedLinks() {
+	public synchronized Long countUnprocessedLinks() {
 		return collection.count(eq("isProcessed", false));
+	}
+
+	public static LinkDAOImpl getInstance() {
+		if (instance == null) {
+			instance = new LinkDAOImpl();
+		}
+		return instance;
+	}
+
+	@Override
+	public void restoreUnprocessed(List<HtmlUrl> htmlUrls) {
+		htmlUrls.stream().forEach(url -> {
+			collection.updateOne(eq("_id", url.get_id()), set("isProcessed", false));
+		});
+	}
+
+	@Override
+	public Boolean checkIfExists(String url) {
+		long result = collection.count(eq("url", url));
+		if (result != 0) {
+			return true;
+		}
+		return false;
 	}
 
 }

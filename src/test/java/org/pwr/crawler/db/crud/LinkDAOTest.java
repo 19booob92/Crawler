@@ -1,6 +1,5 @@
 package org.pwr.crawler.db.crud;
 
-import static org.junit.Assert.*;
 import static org.pwr.crawler.utils.restriction.DocumentRestriction.eq;
 
 import java.util.List;
@@ -20,7 +19,7 @@ public class LinkDAOTest {
 
 	@BeforeClass
 	public static void init() {
-		dao = new LinkDAOImpl();
+		dao = LinkDAOImpl.getInstance();
 	}
 
 	@Test
@@ -34,7 +33,7 @@ public class LinkDAOTest {
 	public void shouldReturnProperElements() {
 		List<HtmlUrl> links = dao.listAllLinks();
 
-		Assertions.assertThat(links.get(0).getName()).isEqualTo("bbc");
+		Assertions.assertThat(links.get(0).getName()).isEqualTo("wikipedia");
 	}
 
 	@Test
@@ -53,7 +52,7 @@ public class LinkDAOTest {
 		String anyUrl = "http://www.test.123.pl";
 
 		HtmlUrl url = new HtmlUrl(anyName, anyUrl);
-		String id = dao.saveUrl(url);
+		String id = dao.saveUrl(url).get();
 
 		Assertions.assertThat(id).isNotNull();
 		Assertions.assertThat(id).isNotEmpty();
@@ -75,7 +74,7 @@ public class LinkDAOTest {
 		String anyUrl = "http://www.test.123.pl";
 
 		HtmlUrl url = new HtmlUrl(anyName, anyUrl);
-		String id = dao.saveUrl(url);
+		String id = dao.saveUrl(url).get();
 
 		HtmlUrl savedUrl = dao.findOne(new ObjectId(id));
 
@@ -87,36 +86,76 @@ public class LinkDAOTest {
 
 		savedUrl = dao.findOne(new ObjectId(id));
 	}
-	
+
 	@Test
-	public void shouldReturnProperAmountOfUnprocessedLinks(){
+	public void shouldReturnProperAmountOfUnprocessedLinks() {
 
 		String anyName = "TEST";
 		String anyUrl = "http://www.test.123.pl";
 
 		HtmlUrl processedUrl = new HtmlUrl(anyName, anyUrl);
 		processedUrl.processed();
-		
+
 		dao.saveUrl(processedUrl);
-		
+
 		Long amountOfUnprocessed = dao.countUnprocessedLinks();
 		int amountOfAll = dao.listAllLinks().size();
-		
+
 		Assert.assertTrue(amountOfAll > amountOfUnprocessed);
-		
+
 		dao.delete(eq("name", anyName));
 	}
 
 	@Test
 	public void shouldReturn4Results() {
-			int threadsAmount = 4;
-			Long amountOfUnprocessed = dao.countUnprocessedLinks();
-			
-			List<HtmlUrl> result = dao.listUnprocessedLinksForThread(threadsAmount);
-			
-			int exceptedResultSize = (int) (amountOfUnprocessed / threadsAmount);
-			
-			Assert.assertTrue(result.size() == exceptedResultSize);
-			Assert.assertFalse(result.get(0).getIsProcessed());
+		int threadsAmount = 4;
+		Long amountOfUnprocessed = dao.countUnprocessedLinks();
+
+		List<HtmlUrl> result = dao.listUnprocessedLinksForThread(threadsAmount);
+
+		int exceptedResultSize = (int) (amountOfUnprocessed / threadsAmount);
+
+		Assert.assertTrue(result.size() == exceptedResultSize);
+		Assert.assertFalse(result.get(0).getIsProcessed());
+	}
+
+	@Test
+	public void shouldUpdateProcessedLink() throws Exception {
+		String anyName = "TEST";
+		String anyUrl = "http://www.test.123.pl";
+
+		HtmlUrl url = new HtmlUrl(anyName, anyUrl);
+		dao.saveUrl(url);
+
+		List<HtmlUrl> processedLinks = dao.listUnprocessedLinksForThread(1);
+		ObjectId id = processedLinks.get(0).get_id();
+		
+		HtmlUrl toRestore = dao.findOne(id);
+
+		Assertions.assertThat(toRestore.getIsProcessed()).isTrue();
+		dao.restoreUnprocessed(processedLinks);
+
+		toRestore = dao.findOne(id);
+		
+		Assertions.assertThat(toRestore.getIsProcessed()).isFalse();
+	}
+	
+	@Test
+	public void shouldReturnFalseIfElementDoesNotExists() throws Exception {
+		Boolean result = dao.checkIfExists("url non exists");
+		
+		Assertions.assertThat(result).isFalse();
+	}
+	
+	@Test
+	public void shouldReturnTrueIfElementDoesExists() throws Exception {
+		String anyName = "TEST";
+		String anyUrl = "http://www.test.123.pl";
+
+		HtmlUrl url = new HtmlUrl(anyName, anyUrl);
+		
+		Boolean result = dao.checkIfExists(anyUrl);
+		
+		Assertions.assertThat(result).isTrue();
 	}
 }

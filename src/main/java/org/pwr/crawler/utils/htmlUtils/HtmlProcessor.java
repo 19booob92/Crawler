@@ -23,7 +23,7 @@ public class HtmlProcessor {
 			String link = matcher.group(DATA_POSITION);
 
 			String name = getNameFromUrl(link);
-			
+
 			urls.add(new HtmlUrl(name, PROTOCOL_SUFFIX + link));
 		}
 
@@ -40,11 +40,11 @@ public class HtmlProcessor {
 		return name;
 	}
 
-	public static List<String> findAllPhrasesWithWord(String word, String pageSource) {
+	public static List<String> findAllPhrasesWithWord(String[] words, String pageSource) {
 		List<String> phrases = new ArrayList();
 
-		Pattern anchorPattern = Pattern
-				.compile("([A-Z][^.?!]*?)?(?<!\\w)(?i)(" + word + ")(?!\\w)[^.?!]*?[.?!]{1,2}\"?");
+		Pattern anchorPattern = Pattern.compile(
+				"([A-Z][^.?!]*?)?(?<!\\w)(?i)" + defineWordsToContains(words) + "(?!\\w)[^.?!]*?[.?!]{1,2}\"?");
 
 		Matcher matcher = anchorPattern.matcher(pageSource);
 		while (matcher.find()) {
@@ -54,6 +54,18 @@ public class HtmlProcessor {
 		}
 
 		return phrases;
+	}
+
+	private static String defineWordsToContains(String[] words) {
+		StringBuilder wordRegex = new StringBuilder();
+
+		for (int i = 0; i < words.length; i++) {
+			wordRegex.append("(");
+			wordRegex.append(words[i]);
+			wordRegex.append(") ");
+		}
+
+		return StringUtils.removeLastOccurenceOfCharacter(wordRegex, " ");
 	}
 
 }

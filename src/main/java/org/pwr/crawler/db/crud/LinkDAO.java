@@ -1,6 +1,7 @@
 package org.pwr.crawler.db.crud;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.bson.Document;
 import org.bson.types.ObjectId;
@@ -10,7 +11,7 @@ import org.pwr.crawler.model.HtmlUrl;
 public interface LinkDAO {
 	List<HtmlUrl> listAllLinks();
 	
-	String saveUrl(HtmlUrl url);
+	Optional<String> saveUrl(HtmlUrl url);
 	
 	HtmlUrl findOne(ObjectId id) throws DocumentNotFoundException;
 	
@@ -19,5 +20,9 @@ public interface LinkDAO {
 	List<HtmlUrl> listUnprocessedLinksForThread(int threadAmount);
 
 	Long countUnprocessedLinks();
+
+	void restoreUnprocessed(List<HtmlUrl> htmlUrls);
+
+	Boolean checkIfExists(String url);
 	
 }
