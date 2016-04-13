@@ -94,7 +94,7 @@ public class LinkDAOImpl extends GenericDAO implements LinkDAO {
 
 		return urls;
 	}
-
+	
 	@Override
 	public synchronized Long countUnprocessedLinks() {
 		return collection.count(eq("isProcessed", false));
