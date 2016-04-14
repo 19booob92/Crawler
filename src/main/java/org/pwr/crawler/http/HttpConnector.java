@@ -7,8 +7,6 @@ import java.net.URL;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import javax.swing.plaf.synth.SynthLookAndFeel;
-
 public class HttpConnector {
 
 	private static HttpConnector instance;

@@ -5,15 +5,12 @@ import static org.pwr.crawler.utils.restriction.DocumentRestriction.set;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.pwr.crawler.db.abstracts.GenericDAO;
 import org.pwr.crawler.exceptions.DocumentNotFoundException;
 import org.pwr.crawler.model.HtmlUrl;
-import org.pwr.crawler.utils.htmlUtils.BsonDocumentUtils;
-import org.pwr.crawler.utils.htmlUtils.mappers.HtmlLinkMapper;
 
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.result.DeleteResult;
@@ -48,16 +45,6 @@ public class LinkDAOImpl extends GenericDAO implements LinkDAO {
 		return urls;
 	}
 
-	@Override
-	public Optional<String> saveUrl(HtmlUrl url) {
-		Document urlDocument = null;
-		if (!checkIfExists(url.getUrl())) {
-			urlDocument = HtmlLinkMapper.mapHtmlLink(url);
-			collection.insertOne(urlDocument);
-			return Optional.of(BsonDocumentUtils.getId(urlDocument));
-		}
-		return Optional.empty();
-	}
 
 	@Override
 	public HtmlUrl findOne(ObjectId id) throws DocumentNotFoundException {
@@ -79,17 +66,17 @@ public class LinkDAOImpl extends GenericDAO implements LinkDAO {
 
 	@Override
 	public synchronized List<HtmlUrl> listUnprocessedLinksForThread(int linksToFetchAmount) {
-		List<HtmlUrl> urls = new ArrayList();
+		List<HtmlUrl> urls = new ArrayList<>();
 
 		FindIterable<Document> documents = collection.find(eq("isProcessed", false)).limit(linksToFetchAmount);
+		
+		for (Document doc : documents) {
+			collection.updateOne(doc, set("isProcessed", true));
+		}
 
 		for (Document document : documents) {
 			HtmlUrl url = gson.fromJson(document.toJson(), HtmlUrl.class);
 			urls.add(url);
-		}
-
-		for (Document doc : documents) {
-			collection.updateOne(doc, set("isProcessed", true));
 		}
 
 		return urls;
@@ -105,13 +92,6 @@ public class LinkDAOImpl extends GenericDAO implements LinkDAO {
 			instance = new LinkDAOImpl();
 		}
 		return instance;
-	}
-
-	@Override
-	public void restoreUnprocessed(List<HtmlUrl> htmlUrls) {
-		htmlUrls.stream().forEach(url -> {
-			collection.updateOne(eq("_id", url.get_id()), set("isProcessed", false));
-		});
 	}
 
 	@Override

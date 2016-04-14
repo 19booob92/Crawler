@@ -1,11 +1,10 @@
 package org.pwr.crawler.engine;
 
 import static org.pwr.crawler.utils.htmlUtils.OsType.LINUX;
-import static org.pwr.crawler.utils.htmlUtils.OsType.MAC_OS;
+import static org.pwr.crawler.utils.htmlUtils.OsType.MAC;
 import static org.pwr.crawler.utils.htmlUtils.OsType.UNIX;
 import static org.pwr.crawler.utils.htmlUtils.OsType.WINDOWS;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -18,15 +17,6 @@ import org.pwr.crawler.utils.htmlUtils.TextToSentences;
 
 public class CrawlerAgent implements Runnable {
 
-	private Map<OsType, Integer> statistics = new HashMap<OsType, Integer>() {
-		{
-			put(LINUX, 0);
-			put(WINDOWS, 0);
-			put(UNIX, 0);
-			put(MAC_OS, 0);
-		}
-	};
-
 	private int id;
 
 	private LinkDAO linkDAO;
@@ -34,9 +24,12 @@ public class CrawlerAgent implements Runnable {
 
 	private int linksToFetchAmount;
 
-	public CrawlerAgent(int id, int linksToFetchAmount, String[] wordsToContains) {
+	private Map<OsType, Integer> statistics;
+
+	public CrawlerAgent(int id, int linksToFetchAmount, Map<OsType, Integer> statistics) {
 		this.id = id;
 		this.linksToFetchAmount = linksToFetchAmount;
+		this.statistics = statistics;
 
 		linkDAO = LinkDAOImpl.getInstance();
 		httpConnector = HttpConnector.getInstance();
@@ -57,8 +50,8 @@ public class CrawlerAgent implements Runnable {
 			for (String sentence : TextToSentences.splitTextToSentences(pageSource)) {
 				if (sentence.contains(LINUX.toString())) {
 					addToStatistics(sentence, LINUX);
-				} else if (sentence.contains(MAC_OS.toString())) {
-					addToStatistics(sentence, MAC_OS);
+				} else if (sentence.contains(MAC.toString())) {
+					addToStatistics(sentence, MAC);
 				} else if (sentence.contains(UNIX.toString())) {
 					addToStatistics(sentence, UNIX);
 				} else if (sentence.contains(WINDOWS.toString())) {
