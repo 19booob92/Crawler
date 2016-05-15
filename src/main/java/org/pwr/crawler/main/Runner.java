@@ -5,12 +5,13 @@ import static org.pwr.crawler.utils.htmlUtils.OsType.MAC;
 import static org.pwr.crawler.utils.htmlUtils.OsType.UNIX;
 import static org.pwr.crawler.utils.htmlUtils.OsType.WINDOWS;
 
+import java.io.File;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
-import org.pwr.crawler.db.crud.LinkDAO;
-import org.pwr.crawler.db.crud.LinkDAOImpl;
 import org.pwr.crawler.engine.CrawlerAgent;
 import org.pwr.crawler.engine.Stopper;
 import org.pwr.crawler.utils.htmlUtils.OsType;
@@ -20,6 +21,8 @@ public class Runner {
 	public static int THREAD_AMOUNT = 4;
 
 	public static final int THREAD_ARG = 0;
+
+	public static String dbName = "links";
 
 	public static void main(String[] args) {
 
@@ -38,9 +41,7 @@ public class Runner {
 
 		Thread[] threads = new Thread[THREAD_AMOUNT];
 
-		LinkDAO linkDAO = LinkDAOImpl.getInstance();
-
-		initThreads(linkDAO, threads, statistics);
+		initThreads(threads, statistics);
 		for (Thread thread : threads) {
 			try {
 				thread.join();
@@ -48,7 +49,7 @@ public class Runner {
 				e.printStackTrace();
 			}
 		}
-		
+
 		for (OsType osType : statistics.keySet()) {
 			System.err.println(osType.toString() + " : " + statistics.get(osType));
 		}
@@ -63,15 +64,24 @@ public class Runner {
 		stopperThread.start();
 	}
 
-	private static void initThreads(LinkDAO linkDAO, Thread[] threads, Map<OsType, Integer> statistics) {
+	private static void initThreads(Thread[] threads, Map<OsType, Integer> statistics) {
 
 		CrawlerAgent[] crawlers = new CrawlerAgent[THREAD_AMOUNT];
 
-		Long unprocessedLinksAmount = linkDAO.countUnprocessedLinks();
-		int linksToFetchAmount = (int) Math.ceil(unprocessedLinksAmount * 1.0 / THREAD_AMOUNT);
+		File folder = new File("/home/hadoopuser/data");
+		File[] files = folder.listFiles();
+
+		List<String> filesNames = new ArrayList<>();
+
+		for (File file : files) {
+			if (file.isFile()) {
+				filesNames.add(file.getName());
+			}
+		}
 
 		for (int i = 0; i < THREAD_AMOUNT; i++) {
-			crawlers[i] = new CrawlerAgent(i, linksToFetchAmount, statistics);
+			crawlers[i] = new CrawlerAgent(filesNames.subList(i * THREAD_AMOUNT, i * THREAD_AMOUNT + THREAD_AMOUNT),
+					statistics);
 			threads[i] = new Thread(crawlers[i]);
 
 			threads[i].start();

@@ -5,58 +5,53 @@ import static org.pwr.crawler.utils.htmlUtils.OsType.MAC;
 import static org.pwr.crawler.utils.htmlUtils.OsType.UNIX;
 import static org.pwr.crawler.utils.htmlUtils.OsType.WINDOWS;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Scanner;
 
-import org.pwr.crawler.db.crud.LinkDAO;
-import org.pwr.crawler.db.crud.LinkDAOImpl;
-import org.pwr.crawler.http.HttpConnector;
-import org.pwr.crawler.model.HtmlUrl;
 import org.pwr.crawler.utils.htmlUtils.OsType;
 import org.pwr.crawler.utils.htmlUtils.TextToSentences;
 
 public class CrawlerAgent implements Runnable {
 
-	private int id;
-
-	private LinkDAO linkDAO;
-	private HttpConnector httpConnector;
-
-	private int linksToFetchAmount;
-
 	private Map<OsType, Integer> statistics;
+	private List<String> filesToProcess;
+	Scanner scanner;
 
-	public CrawlerAgent(int id, int linksToFetchAmount, Map<OsType, Integer> statistics) {
-		this.id = id;
-		this.linksToFetchAmount = linksToFetchAmount;
+	public CrawlerAgent(List<String> filesToProcess, Map<OsType, Integer> statistics) {
 		this.statistics = statistics;
-
-		linkDAO = LinkDAOImpl.getInstance();
-		httpConnector = HttpConnector.getInstance();
+		this.filesToProcess = filesToProcess;
 	}
 
 	@Override
 	public void run() {
-		List<HtmlUrl> linksToProcessFromDB;
-		HtmlUrl htmlUrl;
-		linksToProcessFromDB = linkDAO.listUnprocessedLinksForThread(linksToFetchAmount);
-		for (int i = 0; i < linksToProcessFromDB.size(); i++) {
+		for (String fileName : filesToProcess) {
+			try {
+				File file = new File("/home/hadoopuser/data/" + fileName);
+				StringBuilder fileContents = new StringBuilder();
+				scanner = new Scanner(file);
 
-			htmlUrl = linksToProcessFromDB.get(i);
+				if (scanner != null)
+					while (scanner.hasNextLine()) {
+						fileContents.append(scanner.nextLine() + "\n");
+					}
 
-			String pageSource = httpConnector.fetchHtmlFromURL(htmlUrl.getUrl());
-
-			// TODO przetwarzenie strony
-			for (String sentence : TextToSentences.splitTextToSentences(pageSource)) {
-				if (sentence.contains(LINUX.toString())) {
-					addToStatistics(sentence, LINUX);
-				} else if (sentence.contains(MAC.toString())) {
-					addToStatistics(sentence, MAC);
-				} else if (sentence.contains(UNIX.toString())) {
-					addToStatistics(sentence, UNIX);
-				} else if (sentence.contains(WINDOWS.toString())) {
-					addToStatistics(sentence, WINDOWS);
+				for (String sentence : TextToSentences.splitTextToSentences(fileContents.toString())) {
+					if (sentence.contains(LINUX.toString())) {
+						addToStatistics(sentence, LINUX);
+					} else if (sentence.contains(MAC.toString())) {
+						addToStatistics(sentence, MAC);
+					} else if (sentence.contains(UNIX.toString())) {
+						addToStatistics(sentence, UNIX);
+					} else if (sentence.contains(WINDOWS.toString())) {
+						addToStatistics(sentence, WINDOWS);
+					}
 				}
+			} catch (IOException e) {
+			} finally {
+				scanner.close();
 			}
 		}
 	}
